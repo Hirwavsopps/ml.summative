@@ -1,0 +1,45 @@
+# Dependencies for "Non-Invasive Diabetes Risk Screening from Behavioural and Demographic Indicators"
+# Python 3.12 (developed and tested on 3.12.14, Windows 11, CPU only)
+#
+# Install with:   pip install -r requirements.txt
+#
+# Versions are pinned to the exact set used to produce every number in the report, so that
+# `results/table2_experiments.csv` reproduces to the fourth decimal.
+
+# ---- core scientific stack ---------------------------------------------------------------------
+numpy==2.3.5
+pandas==3.0.1
+scipy==1.18.1
+
+# ---- classical machine learning -----------------------------------------------------------------
+scikit-learn==1.9.1
+joblib==1.6.0
+threadpoolctl==3.7.0
+cloudpickle==3.1.2
+
+# ---- deep learning --------------------------------------------------------------------------------
+# tensorflow-cpu avoids a ~500 MB CUDA dependency; the models train on CPU in minutes.
+# Substitute `tensorflow==2.21.0` if you have a supported GPU (see README, "Hardware notes").
+tensorflow-cpu==2.21.0
+keras==3.15.1
+tensorboard==2.21.0
+ml-dtypes==0.6.0
+h5py==3.14.0
+
+# ---- visualisation ----------------------------------------------------------------------------------
+matplotlib==3.11.2
+seaborn==0.13.2
+Pillow==13.0.0
+contourpy==1.4.0
+cycler==0.12.1
+fonttools==4.67.0
+kiwisolver==1.5.1
+pyparsing==3.3.3
+narwhals==2.27.1
+
+# ---- notebook tooling -------------------------------------------------------------------------------
+# Not required to reproduce the results (src/build_notebook.py executes the cells without a kernel),
+# but needed to open and run notebook/diabetes_risk_screening.ipynb interactively.
+jupyter-core==5.9.1
+nbformat==5.11.1
+traitlets==5.16.1

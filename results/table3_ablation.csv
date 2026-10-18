@@ -1,0 +1,10 @@
+run,features,roc_auc,pr_auc,f1,recall,fit_time_s,note
+A1 LR | raw features,21,0.8216,0.3964,0.4438,0.7633,0.1,
+A2 LR | raw + engineered,30,0.8239,0.405,0.4482,0.7641,0.5,
+A3 RF | raw features,21,0.8204,0.4151,0.2291,0.1435,17.7,
+A4 RF | raw + engineered,30,0.8159,0.4085,0.2414,0.1545,25.2,
+A5 HGB | raw features,21,0.8297,0.4296,0.2563,0.1643,4.3,
+A6 HGB | raw + engineered,30,0.8292,0.4276,0.2506,0.1603,4.8,
+"A7 LR | engineered, unscaled",30,0.8233,0.4033,0.4473,0.7618,12.3,no StandardScaler; compared with A2
+A8 HGB | engineered minus 5,25,0.8282,0.4266,0.2429,0.1541,3.8,"dropped: Veggies, Fruits, NoDocbcCost, Sex, AnyHealthcare"
+A9 HGB | duplicates removed,30,0.8209,0.4353,0.2548,0.1641,4.9,"227,908 rows after removing 25,772 repeats; compared with A6"

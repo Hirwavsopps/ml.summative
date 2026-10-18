@@ -1,0 +1,643 @@
+[    0.0s] cell 01/56 [markdown] # Non-Invasive Diabetes Risk Screening from Behavioural and Demographi -- markdown
+[    0.0s] cell 02/56 [markdown] ## 1. Environment and reproducibility controls -- markdown
+[    0.0s] cell 03/56 [code] # -------------------------------------------------------------------- -- running
+Python       : 3.12.14
+NumPy        : 2.3.5
+pandas       : 3.0.1
+scikit-learn : 1.9.1
+TensorFlow   : 2.21.0
+Keras        : 3.15.1
+Project root : C:\Users\Hello\Documents\deepseek-harness\default-workspace\ml-summative
+Global seed  : 42
+[   23.8s] cell 04/56 [markdown] ## 2. Data provenance and integrity audit -- markdown
+[   23.8s] cell 05/56 [code] # -------------------------------------------------------------------- -- running
+File      : diabetes_binary_health_indicators_BRFSS2015.csv
+Size      : 13.49 MB
+SHA-256   : 9f71fda9d4ae5f4878c99b9233b6a16accfa9a17c194116a6b78100540934964
+Shape     : 253,680 rows x 23 columns
+
+Columns   :
+ID, Diabetes_binary, HighBP, HighChol, CholCheck, BMI, Smoker, Stroke, HeartDiseaseorAttack, PhysActivity, Fruits, Veggies, HvyAlcoholConsump, AnyHealthcare, NoDocbcCost, GenHlth, MentHlth, PhysHlth, DiffWalk, Sex, Age, Education, Income
+[   24.2s] cell 06/56 [markdown] ### 2.4 Structural audit -- markdown
+[   24.2s] cell 07/56 [code] # -------------------------------------------------------------------- -- running
+==============================================================================
+INTEGRITY AUDIT
+==============================================================================
+Rows                                  : 253,680
+Columns (incl. ID and target)         : 23
+Missing cells (total)                 : 0
+Rows with >=1 missing cell            : 0
+Exact duplicate rows                  : 0
+Duplicate rows ignoring ID            : 24,206
+Constant columns                      : none
+Domain violations                     : none
+Unique IDs / rows                     : 253,680 / 253,680
+
+Physical range of every feature:
+          HighBP  HighChol  CholCheck  BMI  Smoker  Stroke  HeartDiseaseorAttack  PhysActivity  Fruits  Veggies  HvyAlcoholConsump  AnyHealthcare  NoDocbcCost  GenHlth  MentHlth  PhysHlth  DiffWalk  Sex  Age  Education  Income
+min            0         0          0   12       0       0                     0             0       0        0                  0              0            0        1         0         0         0    0    1          1       1
+max            1         1          1   98       1       1                     1             1       1        1                  1              1            1        5        30        30         1    1   13          6       8
+n_unique       2         2          2   84       2       2                     2             2       2        2                  2              2            2        5        31        31         2    2   13          6       8
+
+All integrity assertions passed.
+
+DUPLICATE RESPONSE PROFILES
+Distinct response profiles            : 227,908
+Rows that are repeats of an earlier row: 25,772 (10.16% of the cohort)
+Profiles occurring more than once     : 12,228  (largest repeats 59 times)
+Profiles carrying BOTH labels         : 1,566 (12.8% of repeated profiles)
+Rows sitting in a label-conflicting profile: 5,218 (2.06% of the cohort)
+Prevalence  raw 0.1393  vs  de-duplicated 0.1500
+
+Interpretation: at most 2.06% of the cohort is unlearnable from these
+features alone. That is the noise floor of the task, not a defect of the model --
+and it bounds achievable accuracy from above no matter how deep the network is.
+[   24.8s] cell 08/56 [markdown] ### 2.5 The variable dictionary and the class imbalance -- markdown
+[   24.8s] cell 09/56 [code] # -------------------------------------------------------------------- -- running
+Table I written to results/table1_dataset_summary.csv
+            Variable    Type                                     Description Values      Mean    Role
+              HighBP  binary              High blood pressure, self-reported    0-1  0.429001 Feature
+            HighChol  binary                 High cholesterol, self-reported    0-1  0.424121 Feature
+           CholCheck  binary               Cholesterol check in past 5 years    0-1  0.962670 Feature
+                 BMI integer                        Body mass index (kg/m^2)  12-98 28.382364 Feature
+              Smoker  binary             Smoked >=100 cigarettes in lifetime    0-1  0.443169 Feature
+              Stroke  binary                          Ever told had a stroke    0-1  0.040571 Feature
+HeartDiseaseorAttack  binary Coronary heart disease or myocardial infarction    0-1  0.094186 Feature
+        PhysActivity  binary     Physical activity in past 30 days (not job)    0-1  0.756544 Feature
+              Fruits  binary                 Consumes fruit >=1 time per day    0-1  0.634256 Feature
+             Veggies  binary            Consumes vegetables >=1 time per day    0-1  0.811420 Feature
+   HvyAlcoholConsump  binary                       Heavy alcohol consumption    0-1  0.056197 Feature
+       AnyHealthcare  binary                         Has any health coverage    0-1  0.951053 Feature
+         NoDocbcCost  binary   Could not see doctor in past 12 months (cost)    0-1  0.084177 Feature
+             GenHlth ordinal           General health, 1=excellent .. 5=poor    1-5  2.511392 Feature
+            MentHlth integer              Days mental health not good (0-30)   0-30  3.184772 Feature
+            PhysHlth integer            Days physical health not good (0-30)   0-30  4.242081 Feature
+            DiffWalk  binary           Difficulty walking or climbing stairs    0-1  0.168224 Feature
+                 Sex  binary                            Sex, 0=female 1=male    0-1  0.440342 Feature
+                 Age ordinal        13-level age category, 1=18-24 .. 13=80+   1-13  8.032119 Feature
+           Education ordinal          1=never attended .. 6=college graduate    1-6  5.050434 Feature
+              Income ordinal                             1=<$10k .. 8=>=$75k    1-8  6.053875 Feature
+
+Positive prevalence          : 0.1393 (13.93%)
+Imbalance ratio              : 6.18 : 1
+Majority-class-only accuracy : 0.8607   <-- the floor any useful model must clear
+[   25.4s] cell 10/56 [markdown] ## 3. Exploratory analysis: what actually carries signal -- markdown
+[   25.4s] cell 11/56 [code] # -------------------------------------------------------------------- -- running
+Strongest inter-feature associations (Spearman):
+        a        b    rho
+Education   Income +0.452
+  GenHlth PhysHlth +0.452
+ DiffWalk  GenHlth +0.423
+ DiffWalk PhysHlth +0.415
+  GenHlth   Income -0.354
+      Age   HighBP +0.345
+
+Feature ranking by mutual information (top 12):
+             feature  mutual_info  spearman_rho
+             GenHlth       0.0446        0.2877
+              HighBP       0.0360        0.2631
+                 BMI       0.0280        0.2263
+            HighChol       0.0223        0.2003
+                 Age       0.0204        0.1777
+            DiffWalk       0.0182        0.2183
+              Income       0.0140       -0.1633
+            PhysHlth       0.0136        0.1568
+HeartDiseaseorAttack       0.0120        0.1773
+           Education       0.0079       -0.1200
+        PhysActivity       0.0068       -0.1181
+              Stroke       0.0038        0.1058
+
+Weakest six features by mutual information: Smoker, Veggies, Fruits, NoDocbcCost, Sex, AnyHealthcare
+These are candidates for the redundancy analysis in Section 9.6, not for automatic deletion:
+a feature can be weak alone and useful in interaction.
+[   28.1s] cell 12/56 [markdown] ## 4. Splitting: three disjoint partitions, stratified -- markdown
+[   28.1s] cell 13/56 [code] # -------------------------------------------------------------------- -- running
+ partition   rows  share  positives  prevalence
+     train 177576 0.7000      24742      0.1393
+validation  38052 0.1500       5302      0.1393
+      test  38052 0.1500       5302      0.1393
+
+Partitions are disjoint, exhaustive and equally stratified.
+[   28.4s] cell 14/56 [markdown] ## 5. Feature engineering -- markdown
+[   28.4s] cell 15/56 [code] # -------------------------------------------------------------------- -- running
+Raw feature count       : 21
+Engineered additions    : 9  -> BMI_band, CardioRisk, HealthyBehaviour, CareAccess, PoorHealthDays, FrequentPoorDays, AgeBMI, BMI_z_sex, SES
+Full feature count      : 30
+Reference BMI means     : female 28.12 kg/m^2 | male 28.70 kg/m^2
+Shapes  train (177576, 30)  val (38052, 30)  test (38052, 30)
+
+Strongest univariate associations after engineering (top 10):
+   feature  spearman_rho  abs_rho
+CardioRisk       +0.3220  +0.3220
+   GenHlth       +0.2877  +0.2877
+    AgeBMI       +0.2819  +0.2819
+    HighBP       +0.2631  +0.2631
+       BMI       +0.2263  +0.2263
+ BMI_z_sex       +0.2236  +0.2236
+  BMI_band       +0.2198  +0.2198
+  DiffWalk       +0.2183  +0.2183
+  HighChol       +0.2003  +0.2003
+       Age       +0.1777  +0.1777
+
+Engineered features inside the top 10: 4 of 9
+[   30.0s] cell 16/56 [markdown] ## 6. Shared evaluation machinery -- markdown
+[   30.0s] cell 17/56 [code] # -------------------------------------------------------------------- -- running
+Evaluation harness ready.
+Reference floor: predicting the majority class scores accuracy 0.8607 and MCC 0.0000.
+Test set size: 38,052 (5,302 positives)
+[   30.0s] cell 18/56 [markdown] ## 7. Classical experiments E1–E5 -- markdown
+[   30.0s] cell 19/56 [code] # -------------------------------------------------------------------- -- running
+[E1] Logistic Regression
+    acc 0.7379 | prec 0.3171 | rec 0.7641 | F1 0.4482 | ROC-AUC 0.8239 | PR-AUC 0.4050 | MCC 0.3650 | Brier 0.1748
+    tuned threshold 0.627 -> rec 0.6090, prec 0.3697, F1 0.4601   (fit 0.5s)
+
+Largest standardised log-odds coefficients (positive -> increases diabetes odds):
+GenHlth             +0.6121
+AgeBMI              +0.4716
+BMI_band            +0.3529
+BMI_z_sex           -0.3371
+HighBP              +0.2710
+BMI                 +0.2257
+CholCheck           +0.2225
+HighChol            +0.2014
+CardioRisk          +0.2006
+HvyAlcoholConsump   -0.1635
+
+Odds-ratio equivalents for the same ten:
+GenHlth              1.844
+AgeBMI               1.603
+BMI_band             1.423
+BMI_z_sex            0.714
+HighBP               1.311
+BMI                  1.253
+CholCheck            1.249
+HighChol             1.223
+CardioRisk           1.222
+HvyAlcoholConsump    0.849
+[   30.7s] cell 20/56 [markdown] ### E2 — Random Forest, untuned -- markdown
+[   30.7s] cell 21/56 [code] # -------------------------------------------------------------------- -- running
+[E2] Random Forest (default)
+    acc 0.8590 | prec 0.4843 | rec 0.1858 | F1 0.2685 | ROC-AUC 0.7963 | PR-AUC 0.3682 | MCC 0.2367 | Brier 0.1035
+    tuned threshold 0.240 -> rec 0.6071, prec 0.3385, F1 0.4346   (fit 23.4s)
+
+Train ROC-AUC 0.9995 vs test ROC-AUC 0.7963 -> generalisation gap 0.2032
+[   61.1s] cell 22/56 [markdown] ### E3 — Random Forest, tuned by randomised search -- markdown
+[   61.1s] cell 23/56 [code] # -------------------------------------------------------------------- -- running
+Randomised search: 37.9s over 6 candidates x 2 folds on 30,000 rows
+Best CV PR-AUC  : 0.4279
+Best configuration:
+    class_weight      = None
+    max_depth         = 30
+    max_features      = sqrt
+    min_samples_leaf  = 11
+    n_estimators      = 191
+[E3] Random Forest (tuned)
+    acc 0.8659 | prec 0.5801 | rec 0.1366 | F1 0.2211 | ROC-AUC 0.8238 | PR-AUC 0.4208 | MCC 0.2344 | Brier 0.0977
+    tuned threshold 0.239 -> rec 0.5905, prec 0.3766, F1 0.4599   (fit 76.0s)
+[  139.7s] cell 24/56 [markdown] ### E4 — Histogram Gradient Boosting -- markdown
+[  139.7s] cell 25/56 [code] # -------------------------------------------------------------------- -- running
+Randomised search: 65.7s over 10 candidates x 3 folds on 100,000 rows
+Best CV PR-AUC  : 0.4373
+    l2_regularization = 0.28016
+    learning_rate     = 0.02918
+    max_iter          = 337
+    max_leaf_nodes    = 29
+    min_samples_leaf  = 81
+[E4] Histogram Gradient Boosting (tuned)
+    acc 0.8671 | prec 0.5828 | rec 0.1620 | F1 0.2535 | ROC-AUC 0.8295 | PR-AUC 0.4295 | MCC 0.2571 | Brier 0.0969
+    tuned threshold 0.256 -> rec 0.5639, prec 0.3962, F1 0.4654   (fit 76.9s)
+
+Boosting rounds actually used (early stopping): 264
+[  217.8s] cell 26/56 [markdown] ### E5 — RBF-kernel Support Vector Machine, with a documented subsampl -- markdown
+[  217.8s] cell 27/56 [code] # -------------------------------------------------------------------- -- running
+SVM exploration: 4 configurations on 25,000 rows in 977.9s
+kernel    C gamma  val_roc_auc
+   rbf  1.0 scale       0.8061
+   rbf  5.0 scale       0.7800
+   rbf  5.0  auto       0.7796
+   rbf 10.0  auto       0.7627
+
+Selected: kernel=rbf, C=1.0, gamma=scale (validation ROC-AUC 0.8061)
+[E5] RBF-kernel SVM
+    acc 0.8597 | prec 0.4654 | rec 0.0456 | F1 0.0831 | ROC-AUC 0.8066 | PR-AUC 0.3598 | MCC 0.1108 | Brier 0.1015
+    tuned threshold 0.222 -> rec 0.6226, prec 0.3497, F1 0.4479   (fit 977.9s)
+
+Support vectors used: 13,697 (54.8% of the subsample)
+[ 1321.8s] cell 28/56 [markdown] ## 8. Ablation: is the feature engineering actually doing anything? -- markdown
+[ 1321.8s] cell 29/56 [code] # -------------------------------------------------------------------- -- running
+A1-A2  Logistic Regression
+  A1 LR | raw features               features=21  ROC-AUC 0.8216  PR-AUC 0.3964  F1 0.4438  (0.1s)
+  A2 LR | raw + engineered           features=30  ROC-AUC 0.8239  PR-AUC 0.4050  F1 0.4482  (0.5s)
+A3-A4  Random Forest (100 trees, shared configuration)
+  A3 RF | raw features               features=21  ROC-AUC 0.8204  PR-AUC 0.4151  F1 0.2291  (17.7s)
+  A4 RF | raw + engineered           features=30  ROC-AUC 0.8159  PR-AUC 0.4085  F1 0.2414  (25.2s)
+A5-A6  Histogram Gradient Boosting (shared configuration)
+  A5 HGB | raw features              features=21  ROC-AUC 0.8297  PR-AUC 0.4296  F1 0.2563  (4.3s)
+  A6 HGB | raw + engineered          features=30  ROC-AUC 0.8292  PR-AUC 0.4276  F1 0.2506  (4.8s)
+A7     Effect of standardisation on the linear model
+  A7 LR | engineered, unscaled       features=30  ROC-AUC 0.8233  PR-AUC 0.4033  F1 0.4473  (12.3s)
+A8     Feature selection: drop the 5 lowest-MI features
+  A8 HGB | engineered minus 5        features=25  ROC-AUC 0.8282  PR-AUC 0.4266  F1 0.2429  (3.8s)
+A9     Sensitivity: exact duplicate response profiles removed (Section 2.4 finding)
+  A9 HGB | duplicates removed        features=30  ROC-AUC 0.8209  PR-AUC 0.4353  F1 0.2548  (4.9s)
+
+Paired effect of feature engineering (PR-AUC, engineered minus raw):
+    A1 LR +0.0086
+    A3 RF -0.0066
+    A5 HGB -0.0020
+
+A9 duplicate sensitivity (A9 minus A6, PR-AUC): +0.0077
+A shift of a few thousandths means the duplicate profiles were not inflating the headline result;
+a large negative shift would mean the original figure was partly memorisation.
+[ 1398.9s] cell 30/56 [markdown] ## 9. Learning curves and the bias–variance diagnosis -- markdown
+[ 1398.9s] cell 31/56 [code] # -------------------------------------------------------------------- -- running
+Logistic Regression        train 0.4266 | val 0.4252 | gap +0.0014 | val still rising by +0.0001 at the last point -> mild variance gap
+Random Forest              train 0.9228 | val 0.4153 | gap +0.5075 | val still rising by +0.0023 at the last point -> overfitting
+Hist. Gradient Boosting    train 0.5550 | val 0.4324 | gap +0.1226 | val still rising by +0.0072 at the last point -> mild variance gap
+
+                  model  final_train_pr_auc  final_val_pr_auc    gap  val_slope_last         diagnosis  seconds
+    Logistic Regression              0.4266            0.4252 0.0014          0.0001 mild variance gap     47.2
+          Random Forest              0.9228            0.4153 0.5075          0.0023       overfitting     15.1
+Hist. Gradient Boosting              0.5550            0.4324 0.1226          0.0072 mild variance gap     10.4
+[ 1472.6s] cell 32/56 [markdown] ## 10. Deep learning: the `tf.data` input pipeline -- markdown
+[ 1472.6s] cell 33/56 [code] # -------------------------------------------------------------------- -- running
+Train batches        : 174 @ batch=1024
+Validation batches   : 38
+Test batches         : 38
+Class weights        : neg 0.581 | pos 3.589  (inverse frequency)
+Feature tensor dtype : float32, shape (177576, 30)
+[ 1472.9s] cell 34/56 [markdown] ### E6 — Multilayer perceptron, deliberately under-regularised -- markdown
+[ 1472.9s] cell 35/56 [code] # -------------------------------------------------------------------- -- running
+  [E6] 26 epochs in 23.7s | best val PR-AUC 0.4265
+Model: "E6_MLP_baseline"
+┌─────────────────────────────────┬────────────────────────┬───────────────┐
+│ Layer (type)                    │ Output Shape           │       Param # │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ hidden_1 (Dense)                │ (None, 64)             │         1,984 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ hidden_2 (Dense)                │ (None, 64)             │         4,160 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ output (Dense)                  │ (None, 1)              │            65 │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+ Total params: 18,629 (72.77 KB)
+ Trainable params: 6,209 (24.25 KB)
+ Non-trainable params: 0 (0.00 B)
+ Optimizer params: 12,420 (48.52 KB)
+[E6] MLP 64-64 (Sequential)
+    acc 0.8656 | prec 0.5601 | rec 0.1645 | F1 0.2543 | ROC-AUC 0.8286 | PR-AUC 0.4233 | MCC 0.2509 | Brier 0.0974
+    tuned threshold 0.226 -> rec 0.6215, prec 0.3743, F1 0.4672   (fit 23.7s)
+
+Train PR-AUC 0.1403 vs test PR-AUC 0.4233
+[ 1497.3s] cell 36/56 [markdown] ### E7 — Adding regularisation: dropout, batch normalisation, capacity -- markdown
+[ 1497.3s] cell 37/56 [code] # -------------------------------------------------------------------- -- running
+  [E7] 40 epochs in 74.5s | best val PR-AUC 0.4260
+Model: "E7_MLP_regularised"
+┌─────────────────────────────────┬────────────────────────┬───────────────┐
+│ Layer (type)                    │ Output Shape           │       Param # │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ features (InputLayer)           │ (None, 30)             │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_1 (Dense)                 │ (None, 128)            │         3,968 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ bn_1 (BatchNormalization)       │ (None, 128)            │           512 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ relu_1 (Activation)             │ (None, 128)            │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ drop_1 (Dropout)                │ (None, 128)            │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_2 (Dense)                 │ (None, 64)             │         8,256 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ bn_2 (BatchNormalization)       │ (None, 64)             │           256 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ relu_2 (Activation)             │ (None, 64)             │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ drop_2 (Dropout)                │ (None, 64)             │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_3 (Dense)                 │ (None, 32)             │         2,080 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ bn_3 (BatchNormalization)       │ (None, 32)             │           128 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ relu_3 (Activation)             │ (None, 32)             │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ drop_3 (Dropout)                │ (None, 32)             │             0 │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ output (Dense)                  │ (None, 1)              │            33 │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+ Total params: 44,805 (175.02 KB)
+ Trainable params: 14,785 (57.75 KB)
+ Non-trainable params: 448 (1.75 KB)
+ Optimizer params: 29,572 (115.52 KB)
+[E7] MLP 128-64-32 + BN/Dropout
+    acc 0.8659 | prec 0.5950 | rec 0.1175 | F1 0.1963 | ROC-AUC 0.8298 | PR-AUC 0.4239 | MCC 0.2213 | Brier 0.0971
+    tuned threshold 0.275 -> rec 0.5570, prec 0.4009, F1 0.4662   (fit 74.5s)
+
+E6 gap (train-test PR-AUC): -0.2830
+E7 gap (train-test PR-AUC): -0.2835
+E7 stopped after 40 of 40 permitted epochs.
+[ 1573.0s] cell 38/56 [markdown] ### E8 — Functional API with entity embeddings for the ordinal survey  -- markdown
+[ 1573.0s] cell 39/56 [code] # -------------------------------------------------------------------- -- running
+Embedding table:
+    GenHlth      cardinality  5 -> embedding dim 3
+    Age          cardinality 13 -> embedding dim 4
+    Education    cardinality  6 -> embedding dim 3
+    Income       cardinality  8 -> embedding dim 4
+    BMI_band     cardinality  6 -> embedding dim 3
+    numeric      25 columns -> dense branch
+  [E8] 30 epochs in 41.9s | best val PR-AUC 0.4264
+Model: "E8_Functional_Embeddings"
+┌─────────────────────┬───────────────────┬────────────┬───────────────────┐
+│ Layer (type)        │ Output Shape      │    Param # │ Connected to      │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ num (InputLayer)    │ (None, 25)        │          0 │ -                 │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ num_dense_1 (Dense) │ (None, 64)        │      1,664 │ num[0][0]         │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ cat_GenHlth         │ (None, 1)         │          0 │ -                 │
+│ (InputLayer)        │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ cat_Age             │ (None, 1)         │          0 │ -                 │
+│ (InputLayer)        │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ cat_Education       │ (None, 1)         │          0 │ -                 │
+│ (InputLayer)        │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ cat_Income          │ (None, 1)         │          0 │ -                 │
+│ (InputLayer)        │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ cat_BMI_band        │ (None, 1)         │          0 │ -                 │
+│ (InputLayer)        │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ num_bn_1            │ (None, 64)        │        256 │ num_dense_1[0][0] │
+│ (BatchNormalizatio… │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ emb_GenHlth         │ (None, 1, 3)      │         15 │ cat_GenHlth[0][0] │
+│ (Embedding)         │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ emb_Age (Embedding) │ (None, 1, 4)      │         52 │ cat_Age[0][0]     │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ emb_Education       │ (None, 1, 3)      │         18 │ cat_Education[0]… │
+│ (Embedding)         │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ emb_Income          │ (None, 1, 4)      │         32 │ cat_Income[0][0]  │
+│ (Embedding)         │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ emb_BMI_band        │ (None, 1, 3)      │         18 │ cat_BMI_band[0][… │
+│ (Embedding)         │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ num_relu_1          │ (None, 64)        │          0 │ num_bn_1[0][0]    │
+│ (Activation)        │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ flat_GenHlth        │ (None, 3)         │          0 │ emb_GenHlth[0][0] │
+│ (Flatten)           │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ flat_Age (Flatten)  │ (None, 4)         │          0 │ emb_Age[0][0]     │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ flat_Education      │ (None, 3)         │          0 │ emb_Education[0]… │
+│ (Flatten)           │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ flat_Income         │ (None, 4)         │          0 │ emb_Income[0][0]  │
+│ (Flatten)           │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ flat_BMI_band       │ (None, 3)         │          0 │ emb_BMI_band[0][… │
+│ (Flatten)           │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ num_drop_1          │ (None, 64)        │          0 │ num_relu_1[0][0]  │
+│ (Dropout)           │                   │            │                   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ cat_concat          │ (None, 17)        │          0 │ flat_GenHlth[0][… │
+│ (Concatenate)       │                   │            │ flat_Age[0][0],   │
+│                     │                   │            │ flat_Education[0… │
+│                     │                   │            │ flat_Income[0][0… │
+│                     │                   │            │ flat_BMI_band[0]… │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ num_dense_2 (Dense) │ (None, 32)        │      2,080 │ num_drop_1[0][0]  │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ cat_dense (Dense)   │ (None, 16)        │        288 │ cat_concat[0][0]  │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ merge (Concatenate) │ (None, 48)        │          0 │ num_dense_2[0][0… │
+│                     │                   │            │ cat_dense[0][0]   │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ head_dense (Dense)  │ (None, 32)        │      1,568 │ merge[0][0]       │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ head_drop (Dropout) │ (None, 32)        │          0 │ head_dense[0][0]  │
+├─────────────────────┼───────────────────┼────────────┼───────────────────┤
+│ output (Dense)      │ (None, 1)         │         33 │ head_drop[0][0]   │
+└─────────────────────┴───────────────────┴────────────┴───────────────────┘
+ Total params: 17,818 (69.61 KB)
+ Trainable params: 5,896 (23.03 KB)
+ Non-trainable params: 128 (512.00 B)
+ Optimizer params: 11,794 (46.07 KB)
+[E8] Emb+MLP (Functional API)
+    acc 0.8659 | prec 0.5698 | rec 0.1531 | F1 0.2414 | ROC-AUC 0.8297 | PR-AUC 0.4260 | MCC 0.2452 | Brier 0.0970
+    tuned threshold 0.262 -> rec 0.5756, prec 0.3960, F1 0.4692   (fit 41.9s)
+
+Validation PR-AUC: E7 0.4261 | E8 0.4265
+[ 1616.0s] cell 40/56 [markdown] ### E9 — Loss re-weighting, learning-rate decay, and an optimiser comp -- markdown
+[ 1616.0s] cell 41/56 [code] # -------------------------------------------------------------------- -- running
+Building on E8 (embeddings) -- higher validation PR-AUC (0.4265).
+
+--- E9 candidate: Adam + exp decay ---
+  [E9_adam] 20 epochs in 26.7s | best val PR-AUC 0.4274
+    validation PR-AUC 0.4275
+
+--- E9 candidate: SGD + Nesterov momentum ---
+  [E9_sgd] 31 epochs in 39.8s | best val PR-AUC 0.4228
+    validation PR-AUC 0.4231
+
+Optimiser comparison (validation PR-AUC):
+                         val_pr_auc  seconds  epochs
+Adam + exp decay             0.4275     26.7    20.0
+SGD + Nesterov momentum      0.4231     39.8    31.0
+[E9] Best DL + class weights (Adam)
+    acc 0.7239 | prec 0.3088 | rec 0.7923 | F1 0.4444 | ROC-AUC 0.8294 | PR-AUC 0.4257 | MCC 0.3650 | Brier 0.1705
+    tuned threshold 0.655 -> rec 0.5941, prec 0.3875, F1 0.4690   (fit 26.7s)
+[ 1684.1s] cell 42/56 [markdown] ## 11. Consolidated results -- markdown
+[ 1684.1s] cell 43/56 [code] # -------------------------------------------------------------------- -- running
+TABLE II -- all experiments, ranked by PR-AUC (test partition, threshold 0.5 unless *_tuned)
+
+exp_id                               model      paradigm  accuracy  precision  recall     f1  roc_auc  pr_auc    mcc  brier  recall_tuned  f1_tuned  fit_time_s
+    E4 Histogram Gradient Boosting (tuned)     Classical    0.8671     0.5828  0.1620 0.2535   0.8295  0.4295 0.2571 0.0969        0.5639    0.4654       76.88
+    E8            Emb+MLP (Functional API) Deep Learning    0.8659     0.5698  0.1531 0.2414   0.8297  0.4260 0.2452 0.0970        0.5756    0.4692       41.95
+    E9      Best DL + class weights (Adam) Deep Learning    0.7239     0.3088  0.7923 0.4444   0.8294  0.4257 0.3650 0.1705        0.5941    0.4690       26.70
+    E7          MLP 128-64-32 + BN/Dropout Deep Learning    0.8659     0.5950  0.1175 0.1963   0.8298  0.4239 0.2213 0.0971        0.5570    0.4662       74.47
+    E6              MLP 64-64 (Sequential) Deep Learning    0.8656     0.5601  0.1645 0.2543   0.8286  0.4233 0.2509 0.0974        0.6215    0.4672       23.69
+    E3               Random Forest (tuned)     Classical    0.8659     0.5801  0.1366 0.2211   0.8238  0.4208 0.2344 0.0977        0.5905    0.4599       76.01
+    E1                 Logistic Regression     Classical    0.7379     0.3171  0.7641 0.4482   0.8239  0.4050 0.3650 0.1748        0.6090    0.4601        0.47
+    E2             Random Forest (default)     Classical    0.8590     0.4843  0.1858 0.2685   0.7963  0.3682 0.2367 0.1035        0.6071    0.4346       23.41
+    E5                      RBF-kernel SVM     Classical    0.8597     0.4654  0.0456 0.0831   0.8066  0.3598 0.1108 0.1015        0.6226    0.4479      977.89
+
+Full hyperparameters per run:
+  E4  Histogram Gradient Boosting (tuned) l2_regularization=0.28016, learning_rate=0.02918, max_iter=337, max_leaf_nodes=29, min_samples_leaf=81 (RandomizedSearchCV, 10x3, PR-AUC)
+  E8  Emb+MLP (Functional API)         Functional 2-branch: embeddings {'GenHlth': 3, 'Age': 4, 'Education': 3, 'Income': 4, 'BMI_band': 3} for 5 ordinal codes + dense 64-32 for 25 numeric; concat -> Dense(32)->Dropout(0.2)->sigmoid; Adam lr=1e-3, batch=1024, no class weight
+  E9  Best DL + class weights (Adam)   embeddings+dense, class_weight={0:0.58, 1:3.59}, Adam + exp decay, exponential LR decay (3e-3, x0.90/1000 steps), early stop val_pr_auc patience=6, batch=1024
+  E7  MLP 128-64-32 + BN/Dropout       Dense(128,64,32) each BN+ReLU+Dropout(0.3), Adam lr=1e-3 + ReduceLROnPlateau(0.5,2), early stop on val_pr_auc patience=6, batch=1024, no class weight
+  E6  MLP 64-64 (Sequential)           Sequential, Dense(64,relu)-Dense(64,relu)-Dense(1,sigmoid), Adam lr=1e-3, batch=1024, epochs<=40, no dropout/BN/L2, no class weight
+  E3  Random Forest (tuned)            class_weight=None, max_depth=30, max_features=sqrt, min_samples_leaf=11, n_estimators=191 (RandomizedSearchCV, 6x2, PR-AUC)
+  E1  Logistic Regression              penalty=l2, C=1.0, solver=lbfgs, max_iter=3000, class_weight=balanced, StandardScaler on 30 features
+  E2  Random Forest (default)          n_estimators=100, max_depth=None, max_features=sqrt, min_samples_leaf=1, no class weights
+  E5  RBF-kernel SVM                   kernel=rbf, C=1.0, gamma=scale, class_weight=balanced, Platt calibration on val; trained on 25,000-row subsample
+
+Majority-class baseline      : accuracy 0.8607, PR-AUC 0.1393
+Best model by PR-AUC         : E4 Histogram Gradient Boosting (tuned)  PR-AUC 0.4295, ROC-AUC 0.8295
+Best classical               : E4 (0.4295 PR-AUC)
+Best deep learning           : E8 (0.4260 PR-AUC)
+
+Figure 8 written to figures/fig8_model_comparison.png
+[ 1684.9s] cell 44/56 [markdown] ### 11.2 Figure 6 — Confusion matrices -- markdown
+[ 1684.9s] cell 45/56 [code] # -------------------------------------------------------------------- -- running
+exp_id                               model  true_pos  false_neg  false_pos  true_neg  sensitivity  specificity  missed_cases_per_1000
+    E1                 Logistic Regression      4051       1251       8723     24027       0.7641       0.7336                  235.9
+    E6              MLP 64-64 (Sequential)       872       4430        685     32065       0.1645       0.9791                  835.5
+    E4 Histogram Gradient Boosting (tuned)       859       4443        615     32135       0.1620       0.9812                  838.0
+
+Reading the last row: 'missed_cases_per_1000' is the number of true diabetics the model would
+fail to flag per 1,000 diabetics screened -- the operationally meaningful cost of the threshold.
+[ 1685.9s] cell 46/56 [markdown] ### 11.3 Figure 7 — ROC and precision–recall curves -- markdown
+[ 1685.9s] cell 47/56 [code] # -------------------------------------------------------------------- -- running
+ROC-AUC versus PR-AUC for every experiment:
+exp_id                               model  roc_auc  pr_auc  optimism_gap
+    E4 Histogram Gradient Boosting (tuned)   0.8295  0.4295        0.4000
+    E8            Emb+MLP (Functional API)   0.8297  0.4260        0.4037
+    E9      Best DL + class weights (Adam)   0.8294  0.4257        0.4037
+    E7          MLP 128-64-32 + BN/Dropout   0.8298  0.4239        0.4059
+    E6              MLP 64-64 (Sequential)   0.8286  0.4233        0.4053
+    E3               Random Forest (tuned)   0.8238  0.4208        0.4030
+    E1                 Logistic Regression   0.8239  0.4050        0.4189
+    E2             Random Forest (default)   0.7963  0.3682        0.4281
+    E5                      RBF-kernel SVM   0.8066  0.3598        0.4468
+
+Mean ROC-AUC 0.8220 vs mean PR-AUC 0.4091: the 0.4128 average gap is the imbalance effect made visible.
+[ 1687.2s] cell 48/56 [markdown] ### 11.4 Figure 5 — Training and validation curves for the four networ -- markdown
+[ 1687.2s] cell 49/56 [code] # -------------------------------------------------------------------- -- running
+Network training summary:
+  E6 MLP 64-64                       epochs 26 | final train loss 0.3053 | final val loss 0.3137 | best val PR-AUC 0.4265 @ epoch 20
+  E7 MLP 128-64-32 + BN/Dropout      epochs 40 | final train loss 0.3146 | final val loss 0.3135 | best val PR-AUC 0.4260 @ epoch 40
+  E8 Embeddings (Functional)         epochs 30 | final train loss 0.3110 | final val loss 0.3138 | best val PR-AUC 0.4264 @ epoch 24
+  E9 Weighted + LR decay             epochs 20 | final train loss 0.4983 | final val loss 0.5065 | best val PR-AUC 0.4274 @ epoch 14
+
+TensorBoard event files were written under logs/tensorboard/ -- one subdirectory per run.
+    E6                     2 event file(s)
+    E7                     2 event file(s)
+    E8                     2 event file(s)
+    E9_adam                2 event file(s)
+    E9_sgd                 2 event file(s)
+[ 1690.3s] cell 50/56 [markdown] ### 11.5 Choosing a decision threshold -- markdown
+[ 1690.3s] cell 51/56 [code] # -------------------------------------------------------------------- -- running
+ threshold  precision  recall     f1  accuracy  flagged_per_1000  missed_cases_per_1000_pos
+      0.10     0.2726  0.8744 0.4156    0.6574             446.9                      125.6
+      0.20     0.3589  0.6767 0.4690    0.7865             262.7                      323.3
+      0.21     0.3661  0.6573 0.4702    0.7937             250.2                      342.7
+      0.30     0.4297  0.4806 0.4537    0.8387             155.8                      519.4
+      0.40     0.4916  0.2993 0.3721    0.8592              84.8                      700.7
+      0.50     0.5828  0.1620 0.2535    0.8671              38.7                      838.0
+      0.60     0.6460  0.0630 0.1148    0.8646              13.6                      937.0
+      0.70     0.7582  0.0130 0.0256    0.8619               2.4                      987.0
+
+F1-optimal threshold on test (for display only): 0.210
+Threshold actually adopted, tuned on validation: 0.256
+[ 1695.3s] cell 52/56 [markdown] ### 11.6 Error analysis: who the model gets wrong, and why -- markdown
+[ 1695.3s] cell 53/56 [code] # -------------------------------------------------------------------- -- running
+Permutation importance: 30 features x 5 repeats on 20,000 test rows in 47.9s
+          feature  importance_mean  importance_std
+          GenHlth         +0.07719        +0.00204
+       CardioRisk         +0.05579        +0.00246
+           AgeBMI         +0.03333        +0.00331
+              BMI         +0.03002        +0.00260
+         HighChol         +0.00971        +0.00157
+HvyAlcoholConsump         +0.00639        +0.00079
+           HighBP         +0.00600        +0.00172
+        BMI_z_sex         +0.00457        +0.00112
+        CholCheck         +0.00453        +0.00130
+              Sex         +0.00382        +0.00038
+              Age         +0.00329        +0.00042
+              SES         +0.00231        +0.00071
+         DiffWalk         +0.00214        +0.00082
+           Income         +0.00177        +0.00052
+        Education         +0.00105        +0.00035
+
+Subgroup performance of E4 at its validation-tuned threshold 0.256
+
+  -- Age band --
+group    n  prevalence  recall  precision     f1
+18-24  854      0.0152  0.1538     0.6667 0.2500
+25-29 1188      0.0168  0.1500     0.3750 0.2143
+30-34 1767      0.0243  0.1395     0.3333 0.1967
+35-39 2097      0.0539  0.2566     0.4394 0.3240
+40-44 2476      0.0719  0.3371     0.4196 0.3738
+45-49 2930      0.0857  0.4104     0.3732 0.3909
+50-54 3907      0.1221  0.4822     0.4236 0.4510
+55-59 4500      0.1427  0.5436     0.3844 0.4503
+60-64 4990      0.1709  0.6166     0.4065 0.4900
+65-69 4827      0.2121  0.6689     0.4437 0.5335
+70-74 3544      0.2091  0.6397     0.3882 0.4832
+75-79 2344      0.2005  0.6191     0.3670 0.4608
+  80+ 2628      0.1815  0.4864     0.3178 0.3844
+
+  -- Self-rated general health (1 excellent - 5 poor) --
+group     n  prevalence  recall  precision     f1
+    1  6774      0.0242  0.1037     0.3617 0.1611
+    2 13349      0.0718  0.1397     0.3039 0.1914
+    3 11411      0.1775  0.5314     0.3516 0.4232
+    4  4753      0.3118  0.7935     0.4217 0.5507
+    5  1765      0.3807  0.8735     0.4851 0.6238
+
+  -- BMI band (kg/m^2) --
+    group     n  prevalence  recall  precision     f1
+    <18.5   477      0.0461  0.2727     0.5455 0.3636
+18.5-24.9 12922      0.0599  0.1964     0.3220 0.2440
+  25-29.9 13702      0.1301  0.4590     0.3557 0.4008
+  30-34.9  6605      0.2124  0.6693     0.3927 0.4950
+  35-39.9  2612      0.2841  0.7844     0.4356 0.5602
+     >=40  1734      0.3339  0.8515     0.4754 0.6101
+
+  -- Sex --
+ group     n  prevalence  recall  precision     f1
+female 21321      0.1302  0.5688     0.4045 0.4728
+  male 16731      0.1510  0.5586     0.3873 0.4574
+
+  -- Income band (1 <$10k - 8 >=$75k) --
+group     n  prevalence  recall  precision     f1
+    1  1423      0.2277  0.7469     0.4216 0.5390
+    2  1793      0.2621  0.7383     0.4242 0.5388
+    3  2432      0.2340  0.6995     0.4457 0.5445
+    4  3141      0.1929  0.6733     0.3950 0.4979
+    5  3861      0.1764  0.6153     0.4064 0.4895
+    6  5502      0.1454  0.5437     0.3870 0.4522
+    7  6466      0.1188  0.4740     0.3655 0.4127
+    8 13434      0.0807  0.3478     0.3497 0.3488
+
+Missed cases: 2,312 of 5,302 positives (43.6%). Their profile versus correctly detected cases:
+            missed (FN) mean  caught (TP) mean  difference
+BMI                  +28.744           +34.439      -5.695
+Age                   +8.930            +9.621      -0.691
+GenHlth               +2.722            +3.730      -1.008
+PhysHlth              +4.278           +10.779      -6.501
+MentHlth              +2.909            +5.460      -2.550
+CardioRisk            +1.344            +2.669      -1.324
+HighBP                +0.547            +0.906      -0.359
+HighChol              +0.509            +0.790      -0.282
+
+Engineered features in the top 15 by permutation importance: 4 of 9
+[ 1744.3s] cell 54/56 [markdown] ## 12. Persisting the models and the run metadata -- markdown
+[ 1744.3s] cell 55/56 [code] # -------------------------------------------------------------------- -- running
+Best traditional (E4) -> models/best_traditional.joblib
+Best deep learning (E8) -> models/best_deep_learning_config.json
+                                   -> models/best_deep_learning.weights.h5
+                                   -> models/best_deep_learning_savedmodel/
+Preprocessor                        -> models/preprocessor.joblib
+Run metadata                        -> models/run_metadata.json
+
+Round-trip verification on the first 500 test rows:
+  traditional : max |delta| = 0.00e+00 -> identical
+  deep learning: max |delta| = 0.00e+00 -> identical
+  SavedModel export: 0.30 MB, loadable with tf.saved_model.load()
+
+Saved files:
+  best_deep_learning.weights.h5            0.15 MB
+  best_deep_learning_config.json           0.04 MB
+  best_deep_learning_savedmodel            0.30 MB
+  best_traditional.joblib                  0.91 MB
+  preprocessor.joblib                      0.00 MB
+  run_metadata.json                        0.01 MB
+[ 1746.1s] cell 56/56 [markdown] ## 13. Reproduction notes and known limitations -- markdown
+[ 1746.1s] wrote diabetes_risk_screening.ipynb (1.25 MB) in 29.1 min; 0 failing cell(s)

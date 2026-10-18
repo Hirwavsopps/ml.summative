@@ -1,0 +1,78 @@
+GOOGLE DRIVE FOLDER — WHAT TO UPLOAD
+====================================
+
+Create one folder, set sharing to "Anyone with the link can view", and upload the five
+items below. Then run, from the project root:
+
+    python src/set_links.py --code <github-url> --drive <drive-folder-url> --video <video-url>
+
+That rewrites the CODE / DATASET & MODELS / VIDEO strip on page 1 and re-renders
+report/Final_Report.pdf. Paste the same three links into the LMS submission comment.
+
+1. CDC_Diabetes_Health_Indicators_RAW.zip
+   The complete, unmodified raw dataset (253,680 rows x 23 columns, 13.5 MB CSV).
+   This is required because raw data must NOT be committed to GitHub.
+
+2. best_traditional.joblib
+   The best classical model, bundled with the fitted FeatureEngineer and StandardScaler so
+   that a single call scores raw survey rows. Includes the tuned decision threshold.
+
+3. best_deep_learning_savedmodel/  (zip this folder)
+   The best neural network in TensorFlow SavedModel format. Load with
+   tf.saved_model.load("best_deep_learning_savedmodel").
+   Also upload best_deep_learning_config.json + best_deep_learning.weights.h5, which rebuild the
+   same model with keras.Model.from_config(...) followed by load_weights(...).
+
+4. preprocessor.joblib
+   The fitted preprocessing objects on their own, in case only the transform is wanted.
+
+5. run_metadata.json
+   Versions, seeds, split sizes, class weights, chosen thresholds and the full metric record
+   for all ten experiments. Lets a marker confirm the saved weights match the reported
+   numbers without rerunning anything.
+
+NOT to be uploaded: logs/tensorboard (goes to GitHub), figures (goes to GitHub).
+
+
+VIDEO RECORDING — CHECKLIST (5-10 minutes, camera on, face visible)
+--------------------------------------------------------------------
+The rubric marks technical mastery, not production value. Suggested run of show:
+
+  0:00-0:45   The problem. Diabetes burden and the laboratory bottleneck in low-resource
+              settings. Why questionnaire-only screening is the question worth asking.
+  0:45-1:30   The dataset. UCI 891 / BRFSS 2015, 253,680 rows, 21 features, none of them a
+              lab measurement. State the 13.93 % positive rate out loud - it drives everything.
+  1:30-2:30   Preprocessing. Three-way split and why (early stopping must not touch test).
+              Feature engineering: the nine features, and the leakage guard on BMI_z_sex.
+  2:30-5:00   The experiments. Walk E1 -> E2 -> E3 -> E4 -> E5, then E6 -> E9. For each, say
+              what changed and why in ONE sentence. Have Table II on screen.
+  5:00-6:30   Results. Show Figure 6 (confusion matrices) and Figure 7 (ROC vs PR). Explain
+              why PR-AUC is the honest metric at 6.2:1. Show Figure 4 learning curves and
+              name the bias-variance diagnosis for each model.
+  6:30-7:30   The threshold. Show Figure 9. This is the strongest point in the project:
+              threshold choice moves recall more than architecture does.
+  7:30-8:30   Error analysis. Show Figure 10b and the subgroup table. Say which subgroup has
+              the weakest recall and why that is an equity problem.
+  8:30-9:00   Limitations and future work. Self-report bias, detection bias via access
+              variables, single US cross-section, no external validation.
+
+Be ready for these questions:
+  - Why is accuracy not the headline metric here?
+  - Why did the engineered features not help the tree models?
+  - Why does logistic regression have the highest F1 at 0.5 but a lower PR-AUC than boosting?
+  - What exactly would you need to deploy this in Rwanda?
+
+
+GITHUB REPOSITORY
+=================
+git init
+git add .
+git commit -m "Diabetes risk screening: classical ML vs deep learning on 253,680 BRFSS records"
+git branch -M main
+git remote add origin https://github.com/YOUR-USERNAME/ml-summative.git
+git push -u origin main
+
+Before pushing, confirm the raw CSV is NOT staged:
+    git status --short          # data/raw/*.csv must not appear
+The bundled .gitignore already excludes data/raw/*.csv, models/*.joblib and the model binaries
+and TensorBoard event files.

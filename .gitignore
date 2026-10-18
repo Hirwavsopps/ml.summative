@@ -1,0 +1,44 @@
+# ---- raw data: never commit (assignment requirement) -----------------------------------------
+data/raw/*.csv
+data/raw/*.zip
+data/raw/SHA256SUMS
+data/processed/
+
+# ---- model artefacts: distributed via Google Drive, not git ----------------------------------
+models/*.joblib
+models/*.keras
+models/*.weights.h5
+models/*_config.json
+models/*_savedmodel/
+models/*.h5
+models/saved_model/
+models/run_metadata.json
+
+# ---- TensorBoard event logs ARE committed: they are the evidence behind the experiment table ----
+logs/wandb/
+wandb/
+
+# ---- python ---------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+.python-version
+
+# ---- editors and OS ---------------------------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- scratch -------------------------------------------------------------------------------------
+_smoke.ipynb
+*.log
+!results/notebook_execution.log
+
+# ---- Drive bundles: these go to Google Drive, not the repository ----------------------------
+deliverables/*.zip
